@@ -1,0 +1,117 @@
+﻿@page "/ManageNews"
+@using Recycling.Data
+@using Recycling.Models
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext DbContext;
+
+@code {
+    public IQueryable<News> NewsList { get; set; }
+
+    bool WindowIsVisible { get; set; }
+    bool isModalVisible { get; set; }
+
+    int editId = 0;
+    string content = "";
+
+    protected override void OnInitialized()
+    {
+        NewsList = DbContext.News
+            .Include(n => n.Author)
+            .AsNoTracking();
+    }
+
+    private void UpdateHandler(GridCommandEventArgs obj)
+    {
+        var editNews = (News) obj.Item;
+        var news = DbContext.News.FirstOrDefault(u => u.Id == editNews.Id);
+        if (news == null) return;
+        news.Title = editNews.Title;
+        news.Enabled = editNews.Enabled;
+        news.CreateTime = editNews.CreateTime;
+        news.Content = editNews.Content;
+        DbContext.SaveChanges();
+    }
+
+    private void UpdateContent()
+    {
+        WindowIsVisible = false;
+        isModalVisible = false;
+        var news = DbContext.News.FirstOrDefault(u => u.Id == editId);
+        if (news == null) return;
+        news.Content = content;
+        DbContext.SaveChanges();
+        StateHasChanged();
+    }
+
+}
+    <TelerikGrid Class="h-100" Data="NewsList" FilterMode="GridFilterMode.FilterMenu"
+             Pageable="true" Sortable="true" EditMode="GridEditMode.Inline"
+             OnUpdate="@UpdateHandler">
+    <GridColumns>
+        <GridColumn Field="@nameof(News.Id)" Title="ID" Editable="false"></GridColumn>
+        <GridColumn Field="@nameof(News.Title)" Title="标题"></GridColumn>
+        <GridColumn Field="@nameof(News.Content)" Title="正文" Editable="false">
+            <Template>
+                @{
+                    var news = context as News;
+                    if (news?.Content.Length > 20)
+                    {
+                        <span>@(news.Content.Substring(0,20) + "...")</span>
+                    }
+                    else
+                    {
+                        <span>@(news.Content)</span>
+                    }
+                }
+                <TelerikButton @onclick="@(() => {
+                                                     var news = context as News; content = news.Content; editId = news.Id;
+                                                     WindowIsVisible = !WindowIsVisible;
+                                         } )">编辑</TelerikButton>
+            </Template>
+        </GridColumn>
+        <GridColumn Field="@nameof(News.CreateTime)" Title="发布时间"></GridColumn>
+        <GridColumn Title="作者" Editable="false">
+            <Template>
+                @{
+                    var news = context as News;
+                    <span>@news?.Author.UserName</span>
+                }
+            </Template>
+        </GridColumn>
+        <GridColumn Field="@nameof(News.Enabled)" Title="是否可见"></GridColumn>
+        <GridCommandColumn>
+            <GridCommandButton Command="Save" Icon="save" ShowInEdit="true">更新</GridCommandButton>
+            <GridCommandButton Command="Edit" Icon="edit">编辑</GridCommandButton>
+            <GridCommandButton Command="Cancel" Icon="cancel" ShowInEdit="true">取消</GridCommandButton>
+        </GridCommandColumn>
+    </GridColumns>
+</TelerikGrid>
+
+<TelerikWindow Modal="true" @bind-Visible="@WindowIsVisible">
+    <WindowTitle>
+        <strong>编辑正文</strong>
+    </WindowTitle>
+    <WindowContent>
+        <TelerikEditor Class="h-100 w-100" @bind-Value="@content"></TelerikEditor>
+    </WindowContent>
+    <WindowActions>
+        <WindowAction Name="Minimize"></WindowAction>
+        <WindowAction Name="Maximize"></WindowAction>
+        <WindowAction Name="Close" OnClick="() => isModalVisible=true"></WindowAction>
+    </WindowActions>
+</TelerikWindow>
+
+
+<TelerikWindow Modal="true" @bind-Visible="@isModalVisible">
+    <WindowTitle>
+        <strong>The Title</strong>
+    </WindowTitle>
+    <WindowContent>
+        <p>是否保存更改</p>
+        <div>
+            <TelerikButton OnClick="UpdateContent">是</TelerikButton>
+            <TelerikButton OnClick=@(() => { editId=0;content = "";isModalVisible = false;WindowIsVisible = false;})>否</TelerikButton>
+            <TelerikButton OnClick="() =>{isModalVisible = false;}">取消</TelerikButton>
+        </div>
+    </WindowContent>
+</TelerikWindow>

@@ -1,0 +1,73 @@
+﻿@page "/OrderDetail/{Id:int}"
+@attribute [Authorize]
+@inject RecyclingService RecyclingService;
+@using Recycling.Models
+@using Recycling.Services
+<h2 class="text-center">订单详情</h2>
+
+<p>订单编号: @CurrentOrder.Id</p>
+<p>创建时间: @CurrentOrder.CreateDateTime</p>
+<p>预约时间: @CurrentOrder.OrderedDateTime</p>
+<p>
+    通讯地址：
+    <span>预约人：@CurrentOrder.Address.ReciverName</span>
+    <span>联系电话：@CurrentOrder.Address.ReciverTel</span>
+    <span>详细地址：@CurrentOrder.Address.Detail</span>
+</p>
+<p>
+    订单状态：
+    @{
+        switch (CurrentOrder.OrderStatus)
+        {
+            case OrderStatus.Ordered:
+                <span>已预约</span>
+                break;
+            case OrderStatus.Canceled:
+                <span>用户已取消</span>
+                break;
+            case OrderStatus.Succeed:
+                <span>成功完成</span>
+                break;
+            case OrderStatus.Failed:
+                <span>回收失败</span>
+                break;
+            default:
+                <span>Error</span>
+                break;
+        }
+    }
+</p>
+
+<p>
+    垃圾品类：
+    <ul>
+
+        @foreach (var currentOrderRecycleItem in CurrentOrder.RecycleItems)
+        {
+            <li>品类：@currentOrderRecycleItem.Category.Name  重量： @currentOrderRecycleItem.Weight 千克</li>
+        }
+    </ul>
+</p>
+<p>
+    总重量：
+    @CurrentOrder.RecycleItems.Sum(re=>re.Weight)千克
+</p>
+
+@{
+    if (CurrentOrder.OrderStatus == OrderStatus.Ordered)
+    {
+        <button class="btn btn-danger" @onclick="() => RecyclingService.OrderService.CancelOrder(CurrentOrder.Id)">取消订单</button>
+    }
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    [Inject] RecyclingService _recyclingService { get; set; }
+    private RecycleOrder CurrentOrder { get; set; }
+
+    protected override void OnInitialized()
+    {
+        CurrentOrder = _recyclingService.OrderService.GetOrderById(Id);
+    }
+
+}

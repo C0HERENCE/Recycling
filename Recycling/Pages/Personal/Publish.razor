@@ -1,0 +1,280 @@
+﻿@page "/Publish"
+@attribute [Authorize]
+@using Recycling.Models
+@using Recycling.Services
+<h2 class="text-center">预约上门</h2>
+<div class="row text-center">
+    <div class="col-4 text-nowrap">
+        <img src="images/no-water.png" alt="no water">
+        拒绝掺水
+    </div>
+    <div class="col-4 text-nowrap">
+        <img src="images/no-cli.png" alt="no cli">
+        拒绝掺杂</div>
+    <div class="col-4 text-nowrap">
+        <img src="images/weight.png" alt="weight">
+        单次10KG起
+    </div>
+</div>
+<hr>
+<div class="row">
+    <div class="col-md-4 order-md-2">
+        <h2 class="d-flex justify-content-between align-items-center">
+            <h2 class="text-muted">你的订单</h2>
+            <span class="badge badge-secondary badge-pill">@RecycleOrder.RecycleItems.Count</span>
+        </h2>
+        <ul class="list-group mb-3">
+        
+            @foreach (var item in RecycleOrder.RecycleItems)
+            {
+                <li class="list-group-item d-flex justify-content-between lh-condensed">
+                    <div>
+                        <h6 class="my-0">@item.Category.Name</h6>
+                        @* <small class="text-muted">Brief description</small> *@
+                    </div>
+                    <span class="text-muted">@item.Weight 千克</span>
+                    <button class="btn btn-outline-danger" @onclick="() => RemoveItem(item)">
+                        <span class="oi oi-delete" aria-hidden="true"></span>
+                    </button>
+                </li>
+            }
+        
+            <li class="list-group-item d-flex justify-content-between">
+                <span>总计</span>
+                <strong>@RecycleOrder.RecycleItems.Sum(item => item.Weight) 千克</strong>
+            </li>
+        </ul>
+        <hr>
+        <h3>预约时间</h3>
+        <div class="row">
+        @{
+            var startHour = DateTime.Now.Hour + 1;
+        }
+        <div class="col-4">
+            <select id="date" class="form-control" @bind="_selectedDate">
+                @if (startHour >= 8 && startHour <= 17)
+                {
+                    <option>今天</option>
+                }
+                <option>明天</option>
+                <option>后天</option>
+            </select>
+        </div>
+        <div class="col-4">
+            <select id="hour" class="form-control" @bind="_orderedHour">
+                @{
+                    @if (_selectedDate == "今天")
+                    {
+                        for (var i = startHour; i < 18; i++)
+                        {
+                            <option>@i.ToString("00")</option>
+                        }
+                    }
+                    else
+                    {
+                        for (var i = 8; i < 18; i++)
+                        {
+                            <option value=@i>@i.ToString("00") 点</option>
+                        }
+                    }
+                }
+            </select>
+        </div>
+        <div class="col-4">
+            <select id="minute" class="form-control" @bind="_orderedMinute">
+                @{
+                    for (var i = 0; i < 60; i+=10)
+                    {
+                        <option value=@i>@i.ToString("00")分</option>
+                    }
+                }
+            </select>
+        </div>
+        </div>
+        <h3>通讯地址</h3>
+        @{
+            var addresses = _recyclingService.UserService.GetUserByUsername(_username)?.Addresses;
+            if (addresses != null)
+            {
+                foreach (var add in addresses)
+                {
+                    if (add.Enabled)
+                    {
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="addressRadio" @onchange="SelectionChanged" id=@("radio" + add.Id) value=@add.Id>
+                            <label class="form-check-label" for=@("radio" + add.Id)>
+                                预约人：@add.User
+                                联系电话： @add.ReciverTel
+                                详细地址：@add.Detail
+                            </label>
+                        </div>
+                    }
+                }
+            }
+        }
+        
+        <button class="btn btn-primary" @onclick="AddAddress">添加地址</button>
+        
+        <div class="w-100 text-center">
+            <button class="btn btn-primary m-1" @onclick="SendAway">公益赠送</button>
+            <button class="btn btn-success m-1" @onclick="OrderNow">立即下单</button>
+            <p>
+                <small class="text-muted">确认下单表示您接受<a href="#" class="text-success">《回收平台上门回收免责条款》</a></small>
+            </p>
+        </div>
+    </div>
+    <div class="col-md-8 order-md-1 border-right">
+        <h2 class="mb-3 text-muted">添加品类
+        </h2>
+        <small class="text-muted">可以在同一订单中依次添加不同品类的可回收物</small>
+        <h3>回收品类</h3>
+        <select class="form-control form-control-sm" @bind="_selectedCategoryName">
+            <option>--请选择--</option>
+            @foreach (var category in _recyclingService.CategoryService.GetAllCategories())
+            {
+                <option>@category.Name</option>
+            }
+        </select>
+    
+        @{
+            var c = _recyclingService.CategoryService.GetPriceByCategoryName(_selectedCategoryName);
+            if (c != null)
+            {
+                <h3>今日指导价格</h3>
+                <ul class="list-group">
+                    @foreach (var cPrice in c)
+                    {
+                        <li class="list-group-item">
+                            <div class="row flex-nowrap">
+                                <div class="col-6">
+                                    <p class="my-1">@cPrice.Name</p>
+                                    <small class="text-muted font-weight-bold">@cPrice.Desc</small>
+                                </div>
+                                <h3 class="col-6 align-middle justify-content-end d-flex">@cPrice.Value 元/公斤</h3>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            }
+        }
+    
+        <h3>预估重量</h3>
+        <div class="row">
+            <div class="col-9">
+                <input class="w-100 align-middle" type="range" min="0" max="100" step="1" @bind="_selectedWeight">
+            </div>
+            <h3 class="col-3 text-nowrap">@_selectedWeight 千克</h3>
+        </div>
+    
+        <div class="w-100 text-center">
+            <button class="btn btn-success my-1" @onclick="AddThisItem">添加该品类</button>
+        </div>
+    </div>
+</div>
+
+
+
+@code {
+    [Inject] private RecyclingService _recyclingService { get; set; }
+    [Inject] private NavigationManager _navigationManager { get; set; }
+    [CascadingParameter] public Task<AuthenticationState> AuthenticationStateTask { get; set; }
+    
+    public RecycleOrder RecycleOrder { get; set; } = new RecycleOrder();
+    
+    private string _username;
+    string _selectedCategoryName = "--请选择--";
+    string _selectedDate = "明天";
+    string _orderedMinute = "0";
+    string _orderedHour = "9";
+    double _selectedWeight = 10.0;
+
+    string _selectedAddress = "";
+    void SelectionChanged(ChangeEventArgs args)
+    {
+        _selectedAddress = (string)args.Value;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthenticationStateTask;
+        _username = state.User.Identity.Name;
+        RecycleOrder.RecycleItems = new List<RecycleItem>();
+    }
+
+    private void SendAway()
+    {
+        Console.WriteLine(_selectedAddress);
+    }
+
+    private void AddThisItem()
+    {
+        var ca = _recyclingService.CategoryService.GetCategoryByName(_selectedCategoryName);
+        if (ca == null)
+        {
+            Console.WriteLine("请选择回收品类");
+            return;
+        }
+        RecycleOrder.RecycleItems.Add(new RecycleItem
+        {
+            Category = ca,
+            Weight = _selectedWeight,
+        });
+        _selectedCategoryName = "--请选择--";
+        _selectedWeight = 10.0;
+        Console.WriteLine("品类已添加");
+    }
+
+    private void OrderNow()
+    {
+        if (RecycleOrder.RecycleItems.Count == 0)
+        {
+            Console.WriteLine("请至少添加一种垃圾品类");
+            return;
+        }
+        if (_orderedHour == "" || _orderedMinute == "")
+        {
+            Console.WriteLine("请选择预约上门时间");
+            return;
+        }
+        if (_selectedAddress == "")
+        {
+            Console.WriteLine("请选择预约上门地址");
+            return;
+        }
+        
+        var orderedTime = DateTime.Now;
+        if (_selectedDate != "今天") orderedTime = orderedTime.AddDays(_selectedDate == "明天" ? 1 : 2);
+        orderedTime = new DateTime(orderedTime.Year, orderedTime.Month, orderedTime.Day,  int.Parse(_orderedHour),  int.Parse(_orderedMinute),0);
+        RecycleOrder.CreateDateTime = DateTime.Now;
+        RecycleOrder.OrderedDateTime = orderedTime;
+        RecycleOrder.OrderStatus = OrderStatus.Ordered;
+        RecycleOrder.AddressId = int.Parse(_selectedAddress);
+        _recyclingService.OrderService.AddOrder(_username, RecycleOrder);
+        Console.WriteLine("预约成功");
+        _navigationManager.NavigateTo("/");
+    }
+
+    private void RemoveItem(RecycleItem item)
+    {
+        RecycleOrder.RecycleItems.Remove(item);
+        Console.WriteLine("已删除");
+    }
+
+    private void AddAddress()
+    {
+        if (_recyclingService.AddressService.GetAddressCountByUsername(_username) >= 3)
+        {
+            Console.WriteLine("最多拥有3个地址, 请先删除");
+            return;
+        }
+        _recyclingService.AddressService.AddAddressToUser(_username, new Address
+        {
+            Detail = "马家屯",
+            Enabled = true,
+            ReciverName = "艳骨",
+            ReciverTel = "1336966333"
+        });
+        Console.WriteLine("添加成功");
+        StateHasChanged();
+    }
+}

@@ -1,0 +1,20 @@
+﻿@page "/news"
+@using Recycling.Services
+<h2 class="text-center">环保资讯</h2>
+
+<ul>
+@foreach (var news in RecyclingService.NewsService.GetAllNewsDesc())
+{
+    <li>
+        <a href=@("/newsDetail/" + news.Id)>
+            @news.Title
+            @news.Author.UserName
+        </a>
+    </li>
+}
+</ul>
+
+
+@code {
+    [Inject] private RecyclingService RecyclingService { get; set; }
+}

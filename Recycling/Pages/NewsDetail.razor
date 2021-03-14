@@ -1,0 +1,120 @@
+﻿@page "/NewsDetail/{Id:int}"
+@using Recycling.Services
+@using Recycling.Models
+<h3>NewsDetail</h3>
+
+<div class="container">
+    <div class="row">
+        <div class="col-lg-8">
+<!--            抬头-->
+            <h1>@News.Title</h1>
+            <p class="lead">
+                <i class="fa fa-user"></i> by <a href="">@News.Author.UserName</a>
+            </p>
+            <hr>
+            <p>
+                <i class="fa fa-calendar"></i> 发布于 @News.CreateTime.ToShortDateString()
+            </p>
+            
+<!--            正文-->
+<p>
+    @((MarkupString)News.Content)
+</p>
+
+            <hr>
+          
+<!--            评论框-->
+            <div class="well">
+                <h4><i class="fa fa-paper-plane-o"></i>留下你的评论</h4>
+                <form role="form">
+                    <div class="form-group">
+                        <textarea class="form-control" rows="3" @bind="YourReply"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary" @onclick="SubmitReply"><i class="fa fa-reply"></i>提交</button>
+                </form>
+            </div>
+            
+            <hr>
+
+<!--            评论区-->
+            @{
+                if (News.Replies.Count == 0)
+                {
+                    <p class="text-muted text-center">还没有人评论</p>
+                }
+                else
+                {
+                    @foreach (var newsReply in News.Replies)
+                    {
+                        <p><i class="fa fa-comment"></i> @newsReply.User.UserName 说:
+                            <small> @newsReply.CreateTime</small>
+                        </p>
+                        <p>@newsReply.Content</p>
+                    }
+                }
+            }
+        </div>
+
+        <div class="col-lg-4">
+            <div class="well">
+                <h4><i class="fa fa-fire"></i>相关文章</h4>
+                <ul>
+                    <li><a href="">Related Articles 1</a></li>
+                    <li><a href="">Related Articles 2</a></li>
+                    <li><a href="">Related Articles 3</a></li>
+                    <li><a href="">Related Articles 4</a></li>
+                    <li><a href="">Related Articles 5</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    [Inject] private RecyclingService RecyclingService { get; set; }
+    [CascadingParameter] public Task<AuthenticationState> Task { get; set; }
+    
+    public Models.News News { get; set; }
+    public string YourReply { get; set; } = "";
+    public string Username { get; set; }
+    
+    protected override async Task OnInitializedAsync()
+    {
+        News = RecyclingService.NewsService.GetNewsById(Id);
+        var state = await Task;
+        Username = state.User.Identity?.Name;
+    }
+
+    private void SubmitReply()
+    {
+        var replyStr = YourReply.Trim();
+        if (replyStr == "")
+        {
+            Console.WriteLine("请输入评论内容");
+            return;
+        }
+        if (replyStr.Length > 200)
+        {
+            Console.WriteLine("评论内容不能超出200字");
+            return;
+        }
+        var user = RecyclingService.UserService.GetUserByUsername(Username);
+        if (user == null)
+        {
+            Console.WriteLine("请登录后评论");
+            return;
+        }
+        var reply = new Reply
+        {
+            UserId = user.Id,
+            Content = replyStr,
+            CreateTime = DateTime.Now,
+            Enabled = true
+        };
+        RecyclingService.NewsService.AddReply(Id, reply);
+        Console.WriteLine("评论成功");
+        StateHasChanged();
+    }
+
+}

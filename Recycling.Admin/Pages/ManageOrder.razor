@@ -1,0 +1,113 @@
+﻿@page "/ManageOrder"
+@using Recycling.Data
+@using Recycling.Models
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext DbContext;
+
+@code {
+    public IQueryable<RecycleOrder> Orders { get; set; }
+    protected override void OnInitialized()
+    {
+        Orders = DbContext.RecycleOrders
+            .Include(o => o.Address)
+                .ThenInclude(a=>a.User)
+            .Include(o => o.RecycleItems)
+                .ThenInclude(re => re.Category)
+            .AsNoTracking();
+    }
+
+    private void UpdateHandler(GridCommandEventArgs obj)
+    {
+        var editOrder = (RecycleOrder) obj.Item;
+        var order = DbContext.RecycleOrders.FirstOrDefault(u => u.Id == editOrder.Id);
+        if (order == null) return;
+        if (order.FinishedDateTime == editOrder.FinishedDateTime) // 没有重设完成时间时
+        {
+            if (editOrder.OrderStatus != OrderStatus.Ordered) // 将订单状态设为结束时
+            {
+                order.FinishedDateTime = DateTime.Now; // 更新完成时间
+            }
+        }
+        else
+        {
+            order.FinishedDateTime = editOrder.FinishedDateTime;
+        }
+        order.OrderedDateTime = editOrder.OrderedDateTime;
+        order.CreateDateTime = editOrder.CreateDateTime;
+        order.OrderStatus = editOrder.OrderStatus;
+        DbContext.SaveChanges();
+    }
+}
+
+
+        <TelerikGrid Class="h-100" Data="Orders" FilterMode="GridFilterMode.FilterMenu"
+                     Pageable="true" Sortable="true" EditMode="GridEditMode.Inline"
+                     SelectionMode="@GridSelectionMode.Single"
+                     OnUpdate="@UpdateHandler">
+                     
+            <GridColumns>
+                <GridColumn Field="@nameof(RecycleOrder.Id)" Title="ID" Editable="false"></GridColumn>
+                <GridColumn Title="用户名" Editable="false">
+                    <Template>
+                        @{
+                            var recycleOrder = context as RecycleOrder;
+                            @recycleOrder?.Address.User.UserName
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn Field="@nameof(RecycleOrder.CreateDateTime)" Title="创建时间"></GridColumn>
+                <GridColumn Field="@nameof(RecycleOrder.OrderedDateTime)" Title="预约时间"></GridColumn>
+                <GridColumn Field="@nameof(RecycleOrder.FinishedDateTime)" Title="结束时间"></GridColumn>
+                <GridColumn Title="通讯地址">
+                    <Template>
+                        @{
+                            var order = context as RecycleOrder;
+                            <p>联系人： @order?.Address.ReciverName</p>
+                            <p>联系电话： @order?.Address.ReciverTel</p>
+                            <p>地址： @order?.Address.Detail</p>
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn Field="@nameof(RecycleOrder.OrderStatus)" Title="订单状态">
+                    <Template>
+                        @{
+                            var order = context as RecycleOrder;
+                            switch (order.OrderStatus)
+                            {
+                                case OrderStatus.Ordered:
+                                    <span>已预约</span>
+                                    break;
+                                case OrderStatus.Canceled:
+                                    <span>已取消</span>
+                                    break;
+                                case OrderStatus.Succeed:
+                                    <span>已完成</span>
+                                    break;
+                                case OrderStatus.Failed:
+                                    <span>已终止</span>
+                                    break;
+                                default:
+                                    <span>Error</span>
+                                    throw new ArgumentOutOfRangeException();
+                            }
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn Title="订单品类">
+                    <Template>
+                        @{
+                            var order = context as RecycleOrder;
+                            foreach (var orderRecycleItem in order?.RecycleItems)
+                            {
+                                <p>@orderRecycleItem.Category.Name @orderRecycleItem.Weight 千克</p>
+                            }
+                        }
+                    </Template>
+                </GridColumn>
+                <GridCommandColumn>
+                    <GridCommandButton Command="Save" Icon="save" ShowInEdit="true">更新</GridCommandButton>
+                    <GridCommandButton Command="Edit" Icon="edit">编辑</GridCommandButton>
+                    <GridCommandButton Command="Cancel" Icon="cancel" ShowInEdit="true">取消</GridCommandButton>
+                </GridCommandColumn>
+            </GridColumns>
+        </TelerikGrid>

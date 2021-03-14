@@ -1,0 +1,28 @@
+﻿@page "/Orders"
+@attribute [Authorize]
+@using Recycling.Services
+<h2 class="text-center">订单中心</h2>
+
+<ul>
+
+    @foreach (var recycleOrder in _recyclingService.OrderService.GetOrdersByUsername(_username))
+    {
+        <li>
+            <a href=@("/OrderDetail/" + recycleOrder.Id)>@recycleOrder.CreateDateTime</a>
+        </li>
+    }
+
+</ul>
+
+@code {
+    private string _username { get; set; }
+    [CascadingParameter] Task<AuthenticationState> _task { get; set; }
+    [Inject] RecyclingService _recyclingService { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await _task;
+        _username = state.User.Identity.Name;
+    }
+
+}

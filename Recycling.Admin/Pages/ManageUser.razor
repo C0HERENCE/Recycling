@@ -1,0 +1,42 @@
+﻿@page "/ManageUser"
+@using Recycling.Data
+@using Recycling.Models
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext DbContext;
+
+@code {
+    public IQueryable<User> Users { get; set; }
+    protected override void OnInitialized()
+    {
+        Users = DbContext.Users.AsNoTracking();
+    }
+
+    private void UpdateHandler(GridCommandEventArgs obj)
+    {
+        var editUser = (User) obj.Item;
+        var user = DbContext.Users.FirstOrDefault(u => u.Id == editUser.Id);
+        if (user == null) return;
+        user.UserName = editUser.UserName;
+        user.Email = editUser.Email;
+        user.Score = editUser.Score;
+        user.EmailConfirmed = editUser.EmailConfirmed;  
+        DbContext.SaveChanges();
+    }
+}
+
+<TelerikGrid Class="h-100" Data="Users" FilterMode="GridFilterMode.FilterMenu"
+             Pageable="true" Sortable="true" EditMode="GridEditMode.Inline"
+             OnUpdate="@UpdateHandler">
+    <GridColumns>
+        <GridColumn Field="@nameof(User.Id)" Title="ID" Editable="false"></GridColumn>
+        <GridColumn Field="@nameof(User.UserName)" Title="用户名"></GridColumn>
+        <GridColumn Field="@nameof(User.Email)" Title="邮箱"></GridColumn>
+        <GridColumn Field="@nameof(User.Score)" Title="积分"></GridColumn>
+        <GridColumn Field="@nameof(User.EmailConfirmed)" Title="邮箱验证通过"></GridColumn>
+        <GridCommandColumn>
+            <GridCommandButton Command="Save" Icon="save" ShowInEdit="true">更新</GridCommandButton>
+            <GridCommandButton Command="Edit" Icon="edit">编辑</GridCommandButton>
+            <GridCommandButton Command="Cancel" Icon="cancel" ShowInEdit="true">取消</GridCommandButton>
+        </GridCommandColumn>
+    </GridColumns>
+</TelerikGrid>

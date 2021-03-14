@@ -1,0 +1,60 @@
+﻿@page "/ManageCategoryPrice"
+@using Recycling.Data
+@using Recycling.Models
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext DbContext;
+
+@code {
+    public IQueryable<Price> Prices { get; set; }
+    protected override void OnInitialized()
+    {
+        Prices = DbContext.Prices
+            .Include(p => p.Category)
+            .AsNoTracking();
+    }
+
+    private void UpdateHandler(GridCommandEventArgs obj)
+    {
+        var editPrice = (Price) obj.Item;
+        var price = DbContext.Prices.FirstOrDefault(u => u.Id == editPrice.Id);
+        if (price == null) return;
+        price.Name = editPrice.Name;
+        price.Value = editPrice.Value;
+        price.CategoryId = editPrice.CategoryId;
+        price.Desc = editPrice.Desc;
+        DbContext.SaveChanges();
+    }
+}
+
+<TelerikGrid Class="h-100" Data="Prices" FilterMode="GridFilterMode.FilterMenu"
+             Pageable="true" Sortable="true" EditMode="GridEditMode.Inline"
+             OnUpdate="@UpdateHandler">
+    <GridColumns>
+        <GridColumn Field="@nameof(Price.Id)" Title="ID" Editable="false"></GridColumn>
+        <GridColumn Field="@nameof(Price.Name)" Title="品名"></GridColumn>
+        <GridColumn Field="@nameof(Price.Value)" Title="单价"></GridColumn>
+        <GridColumn Title="类名" Groupable="true">
+            <Template>
+                @{
+                    var price = context as Price;
+                    @price?.Category.Name
+                }
+            </Template>
+            <EditorTemplate>
+                @{
+                   <TelerikDropDownList Data="@(DbContext.Categories.AsNoTracking().ToList())"
+                                        @bind-Value="@((context as Price).CategoryId)"
+                                        TextField="@nameof(Category.Name)"
+                                        ValueField="@nameof(Category.Id)">
+                   </TelerikDropDownList>
+                }
+            </EditorTemplate>
+        </GridColumn>
+        <GridColumn Field="@nameof(Price.Desc)" Title="备注"></GridColumn>
+        <GridCommandColumn>
+            <GridCommandButton Command="Save" Icon="save" ShowInEdit="true">更新</GridCommandButton>
+            <GridCommandButton Command="Edit" Icon="edit">编辑</GridCommandButton>
+            <GridCommandButton Command="Cancel" Icon="cancel" ShowInEdit="true">取消</GridCommandButton>
+        </GridCommandColumn>
+    </GridColumns>
+</TelerikGrid>
