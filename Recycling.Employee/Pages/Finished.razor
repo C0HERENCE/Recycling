@@ -1,0 +1,54 @@
+﻿@page "/finished"
+@using Recycling.Data
+@using Recycling.Models
+@using Microsoft.EntityFrameworkCore
+<h3>已完成订单</h3>
+
+<ul class="list-group">
+    @foreach (var recycleOrder in Orders)
+    {
+        <li class="list-group-item">
+            <span>姓名：@recycleOrder.Address.ReciverName</span>
+            <span>联系人电话：@recycleOrder.Address.ReciverTel</span>
+            <p>详细地址: @recycleOrder.Address.Detail</p>
+            <ul class="list-group">
+                @foreach (var item in recycleOrder.RecycleItems)
+                {
+                    <li class="list-group-item-info">@item.Category.Name : @item.Weight 千克</li>
+                }
+                <li class="list-group-item-info">下单时间：@recycleOrder.CreateDateTime</li>
+                <li class="list-group-item-info">预约时间：@recycleOrder.OrderedDateTime</li>
+                <li class="list-group-item-info">完成时间：@recycleOrder.FinishedDateTime</li>
+                <li class="list-group-item-info">成交金额：@recycleOrder.ExpectPrice</li>
+                <li class="list-group-item-info">增加积分：@recycleOrder.AddedScore</li>
+            </ul>
+            <br>
+        </li>
+    }
+</ul>
+
+@code {
+    [Inject]
+    private ApplicationDbContext _dbContext { get; set; }
+    [CascadingParameter]
+    public Task<AuthenticationState> AuthenticationStateTask { get; set; }
+
+    public List<RecycleOrder> Orders { get; set; } = new();
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthenticationStateTask;
+        var username = state.User.Identity.Name;
+        Orders = _dbContext.RecycleOrders
+            .Include(o => o.Address)
+            .ThenInclude(a => a.User)
+            .Include(o => o.RecycleItems)
+            .ThenInclude(i => i.Category)
+            .Where(o => o.OrderStatus == OrderStatus.Succeed || o.OrderStatus == OrderStatus.Failed)
+            .Where(o => o.ProcesserName == username)
+            .AsNoTracking()
+            .ToList();
+    }
+
+}

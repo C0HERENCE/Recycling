@@ -3,6 +3,7 @@
 @using Recycling.Models
 @using Microsoft.EntityFrameworkCore
 @inject ApplicationDbContext DbContext;
+@inject NavigationManager uriHelper;
 
 @code {
     public IQueryable<News> NewsList { get; set; }
@@ -40,12 +41,31 @@
         if (news == null) return;
         news.Content = content;
         DbContext.SaveChanges();
+        NewsList = DbContext.News
+            .Include(n => n.Author)
+            .AsNoTracking();
         StateHasChanged();
     }
 
+    private void addNewArticle()
+    {
+        DbContext.News.Add(new News
+        {
+            AuthorId = 1,
+            Content = "请填写内容",
+            Enabled = false,
+            CreateTime = DateTime.Now,
+            Title = "请输入标题"
+        });
+        DbContext.SaveChanges();
+        StateHasChanged();
+        // uriHelper.NavigateTo(uriHelper.Uri, forceLoad: true);
+    }
+
 }
+    <TelerikButton @onclick="addNewArticle">点击添加一篇文章</TelerikButton>
     <TelerikGrid Class="h-100" Data="NewsList" FilterMode="GridFilterMode.FilterMenu"
-             Pageable="true" Sortable="true" EditMode="GridEditMode.Inline"
+             Pageable="true" PageSize="5" Sortable="true" EditMode="GridEditMode.Inline"
              OnUpdate="@UpdateHandler">
     <GridColumns>
         <GridColumn Field="@nameof(News.Id)" Title="ID" Editable="false"></GridColumn>
@@ -70,14 +90,14 @@
             </Template>
         </GridColumn>
         <GridColumn Field="@nameof(News.CreateTime)" Title="发布时间"></GridColumn>
-        <GridColumn Title="作者" Editable="false">
-            <Template>
-                @{
-                    var news = context as News;
-                    <span>@news?.Author.UserName</span>
-                }
-            </Template>
-        </GridColumn>
+        @* <GridColumn Title="作者" Editable="false"> *@
+        @*     <Template> *@
+        @*         @{ *@
+        @*             var news = context as News; *@
+        @*             <span>@news?.Author.Username</span> *@
+        @*         } *@
+        @*     </Template> *@
+        @* </GridColumn> *@
         <GridColumn Field="@nameof(News.Enabled)" Title="是否可见"></GridColumn>
         <GridCommandColumn>
             <GridCommandButton Command="Save" Icon="save" ShowInEdit="true">更新</GridCommandButton>

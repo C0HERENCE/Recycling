@@ -1,14 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Blazored.SessionStorage;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
@@ -51,16 +54,32 @@ namespace Recycling.Admin
                 options.SupportedUICultures = supportedCultures;
             });
             
+            // 数据库配置
             services.AddDbContext<ApplicationDbContext>(options =>
             {
-                // options.UseSqlite(
-                //     Configuration.GetConnectionString("DefaultConnection"));
                 options.UseSqlServer(
                     Configuration.GetConnectionString("SqlServerConnection"));
                 options.EnableSensitiveDataLogging();
                 options.EnableDetailedErrors();
             });
-            services.AddDefaultIdentity<User>(options => options.SignIn.RequireConfirmedAccount = true)
+            // 认证信息Scheme和保存位置
+            services.AddAuthentication(options =>
+            {
+                options.DefaultScheme = IdentityConstants.ApplicationScheme;
+                options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+            }).AddIdentityCookies();
+            // Identity配置
+            services.AddIdentityCore<User>(options =>
+                {
+                    options.User.RequireUniqueEmail = true;
+                    options.Password.RequireDigit = true;
+                    options.Password.RequiredLength = 6;
+                    options.Password.RequireLowercase = false;
+                    options.Password.RequireUppercase = false;
+                    options.Password.RequireNonAlphanumeric = false;
+                })
+                .AddRoles<Role>()
+                .AddSignInManager()
                 .AddEntityFrameworkStores<ApplicationDbContext>();
             services.AddRazorPages();
             services.AddServerSideBlazor();
@@ -70,6 +89,7 @@ namespace Recycling.Admin
             services.AddDatabaseDeveloperPageExceptionFilter();
             
             services.AddTelerikBlazor();
+            services.AddBlazoredSessionStorage();
             
             
             services.AddScoped<UserService>();
@@ -112,6 +132,28 @@ namespace Recycling.Admin
                 endpoints.MapControllers();
                 endpoints.MapBlazorHub();
                 endpoints.MapFallbackToPage("/_Host");
+                endpoints.MapPost("/api/file", async context =>
+                {
+                    var formFileCollection = context.Request.Form.Files;
+                    var fileName = DateTime.Now.Ticks+new Random().Next(1,10) + ".jpg";
+                    foreach (var file in formFileCollection)
+                    {
+                        {
+                            var filePath = Path.Combine(env.WebRootPath + "\\img", fileName);
+                            if (file.Length <= 0) continue;
+                            await using Stream fileStream = new FileStream(filePath, FileMode.Create);
+                            await file.CopyToAsync(fileStream);
+                        }
+                        {
+                            var directoryInfo = Directory.GetParent(env.WebRootPath).Parent;
+                            var filePath = Path.Combine(directoryInfo+ "\\Recycling\\wwwroot\\img", fileName);
+                            if (file.Length <= 0) continue;
+                            await using Stream fileStream = new FileStream(filePath, FileMode.Create);
+                            await file.CopyToAsync(fileStream);
+                        }
+                    }
+                    await context.Response.WriteAsync(fileName);
+                });
             });
         }
     }

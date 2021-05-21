@@ -1,4 +1,159 @@
 ﻿@page "/ManageMall"
 @using Recycling.Data
 @using Recycling.Models
+@using System.ComponentModel.DataAnnotations
+@inject ApplicationDbContext DbContext;
+@inject IJSRuntime JsRuntime;
+
+@code {
+
+    public class InputModel
+    {
+        [Required(ErrorMessage = "名称不能为空")]
+        public String Name { get; set; }
+
+        [Required(ErrorMessage = "积分不能为空")]
+        [Range(1, 1000, ErrorMessage = "积分必须在1~1000之间")]
+        public int Score { get; set; }
+
+        [Required(ErrorMessage = "简介不能为空")]
+        [StringLength(100, ErrorMessage = "简介最多100字符")]
+        public string Description { get; set; }
+
+        [Required(ErrorMessage = "库存不能为空")]
+        [Range(1, 1000, ErrorMessage = "库存必须在1~1000之间")]
+        public int Stock { get; set; }
+
+        [Required(ErrorMessage = "封面不能为空")]
+        public string FileName { get; set; }
+    }
+
+    public InputModel Input { get; set; } = new InputModel();
+    public bool isAdding { get; set; }
 }
+
+<TelerikToggleButton @bind-Selected="isAdding" OnClick="() => { isAdding = !isAdding; Input=  new InputModel(); }" class="m-3 float-right">
+    @(isAdding ? "收起添加面板" : "添加积分商品")
+</TelerikToggleButton>
+<div class="m-3 bg-muted" hidden="@(!isAdding)">
+    <EditForm Model="@Input" OnValidSubmit="@AddProducts">
+        <DataAnnotationsValidator/>
+        <ValidationSummary/>
+        <div class="form-group">
+            <label>
+                名称：
+                <InputText class="form-control" @bind-Value="Input.Name"/>
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                积分：
+                <InputNumber class="form-control" @bind-Value="Input.Score"></InputNumber>
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                库存：
+                <InputNumber class="form-control" @bind-Value="Input.Stock"></InputNumber>
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                封面：
+                <TelerikUpload Multiple="false" OnUpload="UploadCover" SaveField="Cover" SaveUrl="/api/file" OnSuccess="UploadSuccess"
+                               AllowedExtensions="@(new List<string>() {".jpg", ".png", ".jpeg"})"
+                               MaxFileSize="2048000" MinFileSize="1024"/>
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                简介：
+                <InputTextArea class="form-control" @bind-Value="Input.Description"></InputTextArea>
+            </label>
+        </div>
+        <button class="btn btn-primary" type="submit">添加积分商品</button>
+    </EditForm>
+</div>
+
+@code{
+
+    [CascadingParameter]
+    public Task<AuthenticationState> AuthenticationStateTask { get; set; }
+
+    public void AddProducts()
+    {
+        if (DbContext.Products.Count(x => x.Name == Input.Name) > 0)
+        {
+            JsRuntime.InvokeVoidAsync("alert", "该商品已存在");
+            return;
+        }
+        DbContext.Products.Add(new Product
+        {
+            Name = Input.Name,
+            Value = Input.Score,
+            Description = Input.Description,
+            Enabled = false,
+            Stock = Input.Stock,
+            Cover = "img/" + Input.FileName
+        });
+        DbContext.SaveChanges();
+        isAdding = false;
+        JsRuntime.InvokeVoidAsync("alert", "兑换商品添加成功");
+    }
+
+    private void DeleteProduct(int productId, bool enabled)
+    {
+        var product = DbContext.Products.FirstOrDefault(p => p.Id == productId);
+        product.Enabled = enabled;
+        DbContext.Update(product);
+        DbContext.SaveChanges();
+    }
+
+    private void UploadCover(UploadEventArgs obj)
+    {
+        Console.WriteLine(obj);
+        obj.IsCancelled = false;
+    }
+
+    private void UploadSuccess(UploadSuccessEventArgs obj)
+    {
+        Input.FileName = obj.Request.ResponseText;
+    }
+
+}
+
+<hr>
+
+<div class="row">
+    @foreach (var product in DbContext.Products)
+    {
+        <div class="col-md-3">
+            <div class="card m-2">
+                <img src="@product.Cover" class="card-img-top" alt="...">
+                <div class="card-body">
+                    <h5 class="card-title">@product.Name</h5>
+                    <p class="card-text">
+                        <span class="font-weight-bold">产品介绍：</span>
+                        @product.Description
+                        <br>
+                        <span class="font-weight-bold">所需积分：</span>
+                        @product.Value
+                        <br>
+                        <span class="font-weight-bold">当前：</span>
+                        @product.Stock
+                    </p>
+                    @if (product.Enabled)
+                    {
+                        <h5 class="text-success">售卖中</h5>
+                        <button @onclick="() => DeleteProduct(product.Id, false)" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal">下架</button>
+                    }
+                    else
+                    {
+                        <h5 class="text-danger">已下架</h5>
+                        <button @onclick="() => DeleteProduct(product.Id, true)" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal">上架</button>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>

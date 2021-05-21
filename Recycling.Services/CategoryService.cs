@@ -28,7 +28,7 @@ namespace Recycling.Services
 
         public List<Price>? GetPriceByCategoryName(string categoryName)
         {
-            return GetCategoryByName(categoryName)?.Prices.ToList();
+            return GetCategoryByName(categoryName)?.Prices.Where(x=>x.Enabled).ToList();
         }
     }
 }

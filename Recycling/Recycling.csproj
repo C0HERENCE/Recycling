@@ -5,12 +5,22 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="MailKit" Version="2.11.1" />
       <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="5.0.4" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="5.0.5">
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        <PrivateAssets>all</PrivateAssets>
+      </PackageReference>
+      <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="5.0.2" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\Recycling.Data\Recycling.Data.csproj" />
       <ProjectReference Include="..\Recycling.Services\Recycling.Services.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="wwwroot\img" />
     </ItemGroup>
 
 </Project>

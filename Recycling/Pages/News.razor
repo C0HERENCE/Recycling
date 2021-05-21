@@ -6,9 +6,9 @@
 @foreach (var news in RecyclingService.NewsService.GetAllNewsDesc())
 {
     <li>
-        <a href=@("/newsDetail/" + news.Id)>
+        <a href=@("/newsDetail/" + news.Id) class="p-2 text-muted">
             @news.Title
-            @news.Author.UserName
+            @news.Author.Username
         </a>
     </li>
 }

@@ -1,0 +1,104 @@
+﻿@page "/report"
+@using Recycling.Data
+@using Microsoft.EntityFrameworkCore
+@using Recycling.Models
+@inject ApplicationDbContext DbContext;
+
+<h3>统计</h3>
+@{
+   <h2>兑换商城统计</h2>
+   var records = DbContext.ProductRecords.Include(p=>p.Product).ToList();
+   Dictionary<string, int> sums = new Dictionary<string, int>();
+   foreach (var productRecord in records)
+   {
+      if (!sums.ContainsKey(productRecord.Product.Name)) 
+         sums.Add(productRecord.Product.Name, 0);
+      sums[productRecord.Product.Name]++;
+   }
+
+   series1Data2.Clear();
+   xAxisItems2.Clear();
+   foreach (var keyValuePair in sums)
+   {
+      <p>@keyValuePair.Key 被兑换了 @keyValuePair.Value 次</p>
+      series1Data2.Add(keyValuePair.Value);
+      xAxisItems2.Add(keyValuePair.Key);
+                                                    
+   }
+}
+   <TelerikChart>
+      <ChartSeriesItems>
+         <ChartSeries Type="ChartSeriesType.Bar" Name="商品名称" Data="@series1Data2" Color="dark blue">
+         </ChartSeries>
+      </ChartSeriesItems>
+   
+      <ChartCategoryAxes>
+         <ChartCategoryAxis Categories="@xAxisItems2.ToArray()"></ChartCategoryAxis>
+      </ChartCategoryAxes>
+   
+      <ChartTitle Text="积分商城兑换次数统计图"></ChartTitle>
+   
+      <ChartLegend Position="ChartLegendPosition.Right">
+      </ChartLegend>
+   </TelerikChart>
+
+
+@code {
+   public List<object> series1Data2 = new List<object>() { };
+   public List<string> xAxisItems2 = new List<string> {  };
+}
+
+@* 通过EFCore连接数据库获得所有已完成的订单 *@
+@{
+   <h2>回收品类统计(只展示已成功完成的订单)</h2>
+   var orders = DbContext.RecycleOrders // 访问到RecycleOrders表
+      .Where(records=>records.OrderStatus==OrderStatus.Succeed) // 加入where条件，记录的订单状态为成功
+      .Include(p=>p.RecycleItems) // 加入一个子查询，需要得到订单的订单品类
+      .ThenInclude(p=>p.Category) // 再加入一个子查询，要在订单品类的基础上再得到这个品类的所属分类
+      .ToList(); // 最终将所属分类保存到集合中
+   Dictionary<string, double> sums2 = new Dictionary<string, double>(); // 初始化一个字典，key为回收的品类名，值为对应的质量
+   foreach (var order in orders) // 对从EFcore中拿到的orders集合做遍历
+   {
+      foreach (var orderRecycleItem in order.RecycleItems) // 内循环再对一个order的所有回收品类做遍历
+      {
+         if (!sums2.ContainsKey(orderRecycleItem.Category.Name))
+            sums2.Add(orderRecycleItem.Category.Name, 0); // 如果字典对象中没有这个品类，就初始化建为品类名， 值为0
+         sums2[orderRecycleItem.Category.Name] += orderRecycleItem.Weight;// 如果有的话，对这个品类的质量加上这一单中这一品类的质量
+      }
+   }
+   series1Data.Clear(); // 统计好各个回收品类后，清空图像
+   xAxisItems.Clear();// 清空竖轴
+   foreach (var keyValuePair in sums2) // 遍历保存和所有品类名和对应的重量的字典
+   {
+      // 用html打印一句biotic
+      <p>@keyValuePair.Key 类型共被回收了 @keyValuePair.Value 千克</p>
+      series1Data.Add(keyValuePair.Value); // 向图像中加入这个字典中的每一个横轴值
+      xAxisItems.Add(keyValuePair.Key); // 向图像中加入这个字典中每一个竖轴值
+   }
+   
+}
+@* TelerikChart是一个图表控件 *@
+   <TelerikChart> 
+   @* ChartSeriesItems 是Chart控件要显示的系列 （系列就是一个线）的集合*@
+   <ChartSeriesItems>
+      @* 我们的只需要一个系列 *@
+      @* 设置颜色，设置绑定的对象series1Data *@
+      <ChartSeries Type="ChartSeriesType.Bar" Name="品类名称" Data="@series1Data" Color="purple">
+      </ChartSeries>
+   </ChartSeriesItems>
+   @* CategoryAxes是轴的集合 *@
+   <ChartCategoryAxes>
+      @* 我们只需要一个纵轴 ，纵轴的分类就是刚才保存出来的xAxisItems*@
+      <ChartCategoryAxis Categories="@xAxisItems.ToArray()"></ChartCategoryAxis>
+   </ChartCategoryAxes>
+   
+      <ChartTitle Text="回收分类柱状统计图"></ChartTitle>
+   @* Chart Legend是Chart的图例，通过Position设置他的出现位置，这里设置出现在右侧 *@
+      <ChartLegend Position="ChartLegendPosition.Right">
+      </ChartLegend>
+   </TelerikChart>
+
+@code {
+   public List<object> series1Data = new List<object>() { }; // 质量
+   public List<string> xAxisItems = new List<string> { };// 品类名
+}

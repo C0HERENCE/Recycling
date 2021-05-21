@@ -1,23 +1,42 @@
-﻿@page "/Orders"
+﻿@page "/Orders" //网址
 @attribute [Authorize]
 @using Recycling.Services
+@using Recycling.Data
+@using Microsoft.EntityFrameworkCore
+
 <h2 class="text-center">订单中心</h2>
 
-<ul>
+<ul class="list-group">
 
-    @foreach (var recycleOrder in _recyclingService.OrderService.GetOrdersByUsername(_username))
+
+    @foreach (var order in _applicationDbContext.RecycleOrders.
+        Include(o => o.Address)
+        .ThenInclude(a => a.User)
+        .Include(o=>o.RecycleItems)
+        .ThenInclude(i=>i.Category).ToList())
     {
-        <li>
-            <a href=@("/OrderDetail/" + recycleOrder.Id)>@recycleOrder.CreateDateTime</a>
+        <li class="list-group-item">
+            <h5>@order.RecycleItems[0].Category.Name 等 共 @order.RecycleItems.Count 个品类</h5>
+            联系人：@order.Address.ReciverName
+            创建时间 ：@order.CreateDateTime
+            <a href=@("/OrderDetail/" + order.Id)>点击查看</a>
         </li>
     }
+
 
 </ul>
 
 @code {
     private string _username { get; set; }
-    [CascadingParameter] Task<AuthenticationState> _task { get; set; }
-    [Inject] RecyclingService _recyclingService { get; set; }
+
+    [CascadingParameter]
+    Task<AuthenticationState> _task { get; set; } //获取当前用户
+
+    [Inject]
+    RecyclingService _recyclingService { get; set; } //服务注入
+
+    [Inject]
+    ApplicationDbContext _applicationDbContext { get; set; }
 
     protected override async Task OnInitializedAsync()
     {

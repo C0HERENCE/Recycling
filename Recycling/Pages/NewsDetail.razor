@@ -9,7 +9,7 @@
 <!--            抬头-->
             <h1>@News.Title</h1>
             <p class="lead">
-                <i class="fa fa-user"></i> by <a href="">@News.Author.UserName</a>
+                <i class="fa fa-user"></i> By <a href="">@News.Author.Username</a>
             </p>
             <hr>
             <p>
@@ -24,15 +24,29 @@
             <hr>
           
 <!--            评论框-->
-            <div class="well">
-                <h4><i class="fa fa-paper-plane-o"></i>留下你的评论</h4>
-                <form role="form">
-                    <div class="form-group">
-                        <textarea class="form-control" rows="3" @bind="YourReply"></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary" @onclick="SubmitReply"><i class="fa fa-reply"></i>提交</button>
-                </form>
-            </div>
+<AuthorizeView Roles="reply">
+    <Authorized>
+        <div class="well">
+            <h4><i class="fa fa-paper-plane-o"></i>写下你的留言</h4>
+            <form role="form">
+                <div class="form-group">
+                    <textarea class="form-control" rows="3" @bind="YourReply"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" @onclick="SubmitReply"><i class="fa fa-reply"></i>提交</button>
+            </form>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        @if (string.IsNullOrEmpty(Username))
+        {
+            <p>登录后可以添加评论</p>
+        }
+        else
+        {
+            <p class="text-danger">您没有评论权限</p>
+        }
+    </NotAuthorized>
+</AuthorizeView>
             
             <hr>
 
@@ -46,27 +60,31 @@
                 {
                     @foreach (var newsReply in News.Replies)
                     {
-                        <p><i class="fa fa-comment"></i> @newsReply.User.UserName 说:
-                            <small> @newsReply.CreateTime</small>
-                        </p>
-                        <p>@newsReply.Content</p>
+                        <div style="margin-bottom: 8px">
+                            <p><i class="fa fa-comment"></i> @newsReply.User.UserName 说:
+                                <p>@newsReply.Content</p>
+                                <small> @newsReply.CreateTime</small>
+                            </p>
+
+                        </div>
+                        
                     }
                 }
             }
         </div>
 
-        <div class="col-lg-4">
-            <div class="well">
-                <h4><i class="fa fa-fire"></i>相关文章</h4>
-                <ul>
-                    <li><a href="">Related Articles 1</a></li>
-                    <li><a href="">Related Articles 2</a></li>
-                    <li><a href="">Related Articles 3</a></li>
-                    <li><a href="">Related Articles 4</a></li>
-                    <li><a href="">Related Articles 5</a></li>
-                </ul>
-            </div>
-        </div>
+        @* <div class="col-lg-4"> *@
+        @*     <div class="well"> *@
+        @*         <h4><i class="fa fa-fire"></i>相关文章</h4> *@
+        @*         <ul> *@
+        @*             <li><a href="">Related Articles 1</a></li> *@
+        @*             <li><a href="">Related Articles 2</a></li> *@
+        @*             <li><a href="">Related Articles 3</a></li> *@
+        @*             <li><a href="">Related Articles 4</a></li> *@
+        @*             <li><a href="">Related Articles 5</a></li> *@
+        @*         </ul> *@
+        @*     </div> *@
+        @* </div> *@
     </div>
 </div>
 

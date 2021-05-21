@@ -57,8 +57,24 @@
     if (CurrentOrder.OrderStatus == OrderStatus.Ordered)
     {
         <button class="btn btn-danger" @onclick="() => RecyclingService.OrderService.CancelOrder(CurrentOrder.Id)">取消订单</button>
+    } else if (CurrentOrder.OrderStatus == OrderStatus.Succeed)
+    {
+        <p>
+            完成时间：
+            @CurrentOrder.FinishedDateTime
+        </p>
+        <p>
+            收入：
+            @CurrentOrder.ExpectPrice 元
+        </p>
+        <p>
+            本单获得积分：
+            @CurrentOrder.AddedScore
+        </p>
     }
 }
+<a class="btn btn-success mx-1" href="/orders" style="margin-left: 8px">返回</a>
+
 
 @code {
     [Parameter] public int Id { get; set; }

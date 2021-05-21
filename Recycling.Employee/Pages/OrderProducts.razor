@@ -1,0 +1,67 @@
+﻿@page "/products"
+@using Recycling.Models
+@using Recycling.Data
+@using Microsoft.EntityFrameworkCore
+
+<h3>待处理兑换订单</h3>
+<AuthorizeView Roles="exchange">
+    <Authorized>
+        <ul class="list-group">
+            @foreach (var recycleOrder in Orders)
+            {
+                <li class="list-group-item">
+                    @{
+                        var add = _dbContext.Address.Include(u => u.User).FirstOrDefault(id => id.Id == recycleOrder.AddressId);
+                        <span>姓名：@add.ReciverName</span>
+                        <span>联系人电话：@add.ReciverTel</span>
+                        <p>详细地址: @add.Detail</p>
+                    }
+                    <ul class="list-group">
+                        <li class="list-group-item-info">商品名：@recycleOrder.Product.Name</li>
+                        <li class="list-group-item-info">下单时间：@recycleOrder.CreateDateTime</li>
+                    </ul>
+                    <button class="btn btn-primary" @onclick="() => finish(recycleOrder)">订单完成</button>
+                </li>
+            }
+        </ul>
+    </Authorized>
+    <NotAuthorized>
+        <p class="text-danger">当前没有处理兑换订单的权限</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code{
+
+    [Inject]
+    private ApplicationDbContext _dbContext { get; set; }
+    [Inject]
+    public NavigationManager NavigationManager { get; set; }
+    [CascadingParameter]
+    public Task<AuthenticationState> AuthenticationStateTask { get; set; }
+
+    public List<ProductRecord> Orders { get; set; } = new();
+
+    public string username { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthenticationStateTask;
+        username = state.User.Identity.Name;
+        Orders = _dbContext.ProductRecords
+            .Include(p => p.Product)
+            .Where(o => o.Status == 0)
+            .AsNoTracking()
+            .ToList();
+    }
+
+    private void finish(ProductRecord ord)
+    {
+        ord.Status = 1;
+        ord.FinishDateTime = DateTime.Now;
+        ord.ProcesserName = username; // 设置处理人
+        _dbContext.ProductRecords.Update(ord);
+        _dbContext.SaveChanges();
+        NavigationManager.NavigateTo("/products", forceLoad:true);
+    }
+
+}

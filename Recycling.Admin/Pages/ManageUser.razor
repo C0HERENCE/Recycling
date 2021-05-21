@@ -2,35 +2,72 @@
 @using Recycling.Data
 @using Recycling.Models
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Identity
+@inject NavigationManager NavigationManager;
+
+
+@* // DbContext是EFCore的数据库上下文对象，通过该对象可以访问和执行数据库查询 *@
 @inject ApplicationDbContext DbContext;
 
 @code {
-    public IQueryable<User> Users { get; set; }
-    protected override void OnInitialized()
-    {
-        Users = DbContext.Users.AsNoTracking();
-    }
-
+    // 当用户在Telerik控件中点击更新时，会调用当前函数来执行修改。
     private void UpdateHandler(GridCommandEventArgs obj)
     {
-        var editUser = (User) obj.Item;
-        var user = DbContext.Users.FirstOrDefault(u => u.Id == editUser.Id);
+        var editUser = (User) obj.Item; // 获得当前修改行的User对象保存到editUser中
+        var user = DbContext.Users.FirstOrDefault(u => u.Id == editUser.Id); // 根据当前修改该行的User对象的Id从数据库中拿到原本的对象保存到user中
+    // 如果数据库中没有这个对象了就直接返回
         if (user == null) return;
+    // 如果有这个对象就将editUser中被修改的字段复制到user对象中
         user.UserName = editUser.UserName;
         user.Email = editUser.Email;
         user.Score = editUser.Score;
-        user.EmailConfirmed = editUser.EmailConfirmed;  
+        user.EmailConfirmed = editUser.EmailConfirmed;
+    // 最后更新数据库，保存所作的修改。
         DbContext.SaveChanges();
     }
+
 }
 
+@* // 在本项目中，我 *@
+@* // 使用TelerikGrid控件展示和管理数据，TelerikGrid控件支持数据绑定，下面的代码中，绑定了User集合 *@
+
+@code{
+
+    public IQueryable<User> Users { get; set; }
+    // 重写OnInitialized方法，该方法会在页面初始化时被执行
+    protected override void OnInitialized()
+    {
+    // 在页面初始化时通过DbContext来访问数据库，获得一个Users列表，保存到上面的Users变量中
+        Users = DbContext.Users.AsNoTracking();
+        CRoleModels = new List<RoleModel>
+        {
+            new() {Id = "1", Name = "管理员"},
+            new() {Id = "2", Name = "回复权限"},
+            new() {Id = "3", Name = "预约权限"},
+            new() {Id = "4", Name = "兑换权限"},
+            new() {Id = "5", Name = "回收员"},
+            new() {Id = "6", Name = "订单处理权限"},
+            new() {Id = "7", Name = "处理兑换权限"},
+        };
+    }
+
+}
+
+@* // 先介绍一下TelerikGrid 控件的各个属性 *@
+@* // Data是要显示的用户数据源 *@
+@* // FilterMode是过滤方式 *@
+@* // Pageable允许分页 *@
+@* // Sortable允许排序 *@
+@* // EditMode编辑模式，Inline是行内编辑 *@
+@* // OnUpdate是数据更新的函数 *@
+@* // GridColumns 中 Field是绑定的那个数据源的类型（User）的某个字段，Title是标题 *@
 <TelerikGrid Class="h-100" Data="Users" FilterMode="GridFilterMode.FilterMenu"
              Pageable="true" Sortable="true" EditMode="GridEditMode.Inline"
              OnUpdate="@UpdateHandler">
     <GridColumns>
         <GridColumn Field="@nameof(User.Id)" Title="ID" Editable="false"></GridColumn>
-        <GridColumn Field="@nameof(User.UserName)" Title="用户名"></GridColumn>
-        <GridColumn Field="@nameof(User.Email)" Title="邮箱"></GridColumn>
+        <GridColumn Field="@nameof(User.UserName)" Title="用户名" Editable="false"></GridColumn>
+        <GridColumn Field="@nameof(User.Email)" Title="邮箱" Editable="false"></GridColumn>
         <GridColumn Field="@nameof(User.Score)" Title="积分"></GridColumn>
         <GridColumn Field="@nameof(User.EmailConfirmed)" Title="邮箱验证通过"></GridColumn>
         <GridCommandColumn>
@@ -39,4 +76,46 @@
             <GridCommandButton Command="Cancel" Icon="cancel" ShowInEdit="true">取消</GridCommandButton>
         </GridCommandColumn>
     </GridColumns>
+
+    <DetailTemplate>
+        @{
+            var employee = context as User;
+            var identityUserRoles = DbContext.UserRoles.Where(x => x.UserId == employee.Id);
+            <p>当前用户权限：</p>
+            foreach (var identityUserRole in identityUserRoles)
+            {
+                <span>@((EUserRole) identityUserRole.RoleId + ", ") </span>
+            }
+            <br/>
+            <TelerikMultiSelect Data="@CRoleModels" TextField="Name" ValueField="Id" @bind-Value="Values"
+                                Width="350px" ClearButton="true" AutoClose="false">
+            </TelerikMultiSelect>
+            <TelerikButton OnClick="() => ClickRole(employee)">修改</TelerikButton>
+        }
+    </DetailTemplate>
 </TelerikGrid>
+
+@code {
+
+    public class RoleModel
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+    }
+
+    public List<string> Values { get; set; } = new List<string>();
+    public List<RoleModel> CRoleModels { get; set; }
+
+    public void ClickRole(User user)
+    {
+        var roles = DbContext.UserRoles.Where(x => x.UserId == user.Id).ToList();
+        DbContext.UserRoles.RemoveRange(roles);
+        foreach (var value in Values)
+        {
+            DbContext.UserRoles.Add(new IdentityUserRole<int> {RoleId = int.Parse(value), UserId = user.Id});
+        }
+        DbContext.SaveChanges();
+        // NavigationManager.NavigateTo("/manageUser", forceLoad: true);
+    }
+
+}

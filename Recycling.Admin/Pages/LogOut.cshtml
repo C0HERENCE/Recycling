@@ -1,0 +1,36 @@
+﻿@page
+@model Recycling.Admin.Pages.LogOut
+@attribute [IgnoreAntiforgeryToken]
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title></title>
+</head>
+<body>
+<div>
+@{
+    if (User.Identity.IsAuthenticated)
+    {
+        <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Page("/", new { area = "" })" method="post">
+            <button type="submit" class="nav-link btn btn-link text-dark">点击此处退出登录</button>
+        </form>
+    }
+    else
+    {
+        <p>
+            你已退出系统
+            <br>
+            <a href="/">回到首页</a>
+        </p>
+    }
+}
+</div>
+</body>
+</html>

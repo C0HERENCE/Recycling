@@ -6,6 +6,7 @@
 
 @code {
     public IQueryable<Price> Prices { get; set; }
+
     protected override void OnInitialized()
     {
         Prices = DbContext.Prices
@@ -22,17 +23,36 @@
         price.Value = editPrice.Value;
         price.CategoryId = editPrice.CategoryId;
         price.Desc = editPrice.Desc;
+        price.Enabled = editPrice.Enabled;
         DbContext.SaveChanges();
     }
+
+    private void addNewArticle()
+    {
+        DbContext.Prices.Add(new Price()
+        {
+            CategoryId = 1,
+            Name = "xxx",
+            Desc = "xx",
+            Value = 10.0,
+        });
+        DbContext.SaveChanges();
+        StateHasChanged();
+    // uriHelper.NavigateTo(uriHelper.Uri, forceLoad: true);
+    }
+
 }
 
+
+<TelerikButton @onclick="addNewArticle">点击添加一个品类</TelerikButton>
 <TelerikGrid Class="h-100" Data="Prices" FilterMode="GridFilterMode.FilterMenu"
-             Pageable="true" Sortable="true" EditMode="GridEditMode.Inline"
+             Pageable="true" PageSize="8" Sortable="true" EditMode="GridEditMode.Inline"
              OnUpdate="@UpdateHandler">
     <GridColumns>
         <GridColumn Field="@nameof(Price.Id)" Title="ID" Editable="false"></GridColumn>
         <GridColumn Field="@nameof(Price.Name)" Title="品名"></GridColumn>
         <GridColumn Field="@nameof(Price.Value)" Title="单价"></GridColumn>
+        <GridColumn Field="@nameof(Price.Enabled)" Title="是否可见"></GridColumn>
         <GridColumn Title="类名" Groupable="true">
             <Template>
                 @{
@@ -42,11 +62,11 @@
             </Template>
             <EditorTemplate>
                 @{
-                   <TelerikDropDownList Data="@(DbContext.Categories.AsNoTracking().ToList())"
-                                        @bind-Value="@((context as Price).CategoryId)"
-                                        TextField="@nameof(Category.Name)"
-                                        ValueField="@nameof(Category.Id)">
-                   </TelerikDropDownList>
+                    <TelerikDropDownList Data="@(DbContext.Categories.AsNoTracking().ToList())"
+                                         @bind-Value="@((context as Price).CategoryId)"
+                                         TextField="@nameof(Category.Name)"
+                                         ValueField="@nameof(Category.Id)">
+                    </TelerikDropDownList>
                 }
             </EditorTemplate>
         </GridColumn>

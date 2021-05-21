@@ -1,0 +1,87 @@
+﻿@page "/order"
+@using Recycling.Data
+@using Recycling.Models
+@using Microsoft.EntityFrameworkCore
+@inject IJSRuntime JsRuntime;
+@inject ApplicationDbContext DbContext;
+
+
+<h3>待处理订单</h3>
+<AuthorizeView Roles="recycle">
+    <Authorized>
+        <ul class="list-group">
+            @foreach (var recycleOrder in Orders)
+            {
+                <li class="list-group-item">
+                    <span>姓名：@recycleOrder.Address.ReciverName</span>
+                    <span>联系人电话：@recycleOrder.Address.ReciverTel</span>
+                    <p>详细地址: @recycleOrder.Address.Detail</p>
+                    <ul class="list-group">
+                        @foreach (var item in recycleOrder.RecycleItems)
+                        {
+                            <li class="list-group-item-info">@item.Category.Name : @item.Weight 千克</li>
+                        }
+                        <li class="list-group-item-info">下单时间：@recycleOrder.CreateDateTime</li>
+                        <li class="list-group-item-info">预约时间：@recycleOrder.OrderedDateTime</li>
+                    </ul>
+                    <span>成交金额:</span>
+                    <input type="number" @bind="@recycleOrder.ExpectPrice"> <span>元</span>
+                    <br>
+                    <button class="btn btn-primary" @onclick="() => finish(recycleOrder, OrderStatus.Succeed)">订单完成</button>
+                    <button class="btn btn-danger" @onclick="() => finish(recycleOrder, OrderStatus.Failed)">订单失败</button>
+                </li>
+            }
+        </ul>
+    </Authorized>
+    <NotAuthorized>
+        <p class="text-danger">当前没有处理订单的权限</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+
+@code{
+
+    [Inject]
+    public NavigationManager NavigationManager { get; set; }
+    [CascadingParameter]
+    public Task<AuthenticationState> AuthenticationStateTask { get; set; }
+
+    public string username { get; set; }
+    public List<RecycleOrder> Orders { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthenticationStateTask;
+        username = state.User.Identity.Name;
+        Orders = DbContext.RecycleOrders
+            .AsNoTracking()
+            .Include(o => o.Address)
+            .ThenInclude(a => a.User)
+            .Include(o => o.RecycleItems)
+            .ThenInclude(i => i.Category)
+            .Where(o => o.OrderStatus == OrderStatus.Ordered)
+            .ToList();
+    }
+
+    private void finish(RecycleOrder ord, OrderStatus status)
+    {
+        if (ord.ExpectPrice < 1 || ord.ExpectPrice > 100000)
+        {
+            JsRuntime.InvokeVoidAsync("alert", "请输入合理的回收价格");
+            return;
+        }
+        ord.OrderStatus = status;
+        ord.FinishedDateTime = DateTime.Now; // 设置订单结束时间
+        ord.AddedScore = (int) (ord.ExpectPrice / 10); // 设置本单获得积分
+        ord.ProcesserName = username; // 设置处理人
+        DbContext.RecycleOrders.Update(ord);
+
+        var user = DbContext.Users.FirstOrDefault(u => u.Id == ord.Address.UserId);
+        user.Score += ord.AddedScore; // 设置积分
+        DbContext.Users.Update(user);
+        DbContext.SaveChanges();
+        StateHasChanged();
+        NavigationManager.NavigateTo("/order", forceLoad:true);
+    }
+
+}

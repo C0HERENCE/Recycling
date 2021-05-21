@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -43,13 +44,16 @@ namespace Recycling
             });
             services.AddDefaultIdentity<User>(options =>
                 {
+                    //密码设置
                     options.SignIn.RequireConfirmedAccount = true;
-                    options.Password.RequireDigit = false;
-                    options.Password.RequiredLength = 3;
-                    options.Password.RequireLowercase = false;
-                    options.Password.RequireUppercase = false;
-                    options.Password.RequireNonAlphanumeric = false;
+                    options.Password.RequireDigit = false;//是否要求有数字
+                    options.Password.RequiredLength = 3;//密码要求的最小长度
+                    options.Password.RequireLowercase = false;//是否要求有小写的ASCII码
+                    options.Password.RequireUppercase = false;//是否要求有大写的ASCII码
+                    options.Password.RequireNonAlphanumeric = false;//是否要求有非字母数字的字符
+                    options.User.RequireUniqueEmail = true;
                 })
+                .AddRoles<Role>()
                 .AddEntityFrameworkStores<ApplicationDbContext>();
             services.AddRazorPages();
             services.AddServerSideBlazor();
@@ -67,6 +71,10 @@ namespace Recycling
             services.AddScoped<AddressService>();
             services.AddScoped<NewsService>();
             services.AddScoped<RecyclingService>();
+            services.AddScoped<ProductService>();
+
+            services.AddScoped<IEmailSender, EmailSenderService>();
+            //services.AddScoped<ProductRecordService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

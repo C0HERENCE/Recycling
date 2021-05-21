@@ -1,0 +1,45 @@
+﻿@page "/finishedProduct"
+@using Recycling.Data
+@using Microsoft.EntityFrameworkCore
+@using Recycling.Models
+<h3>已完成的兑换订单</h3>
+   <ul class="list-group">
+            @foreach (var recycleOrder in Orders)
+            {
+                <li class="list-group-item">
+                    @{
+                        var add = _dbContext.Address.Include(u => u.User).FirstOrDefault(id => id.Id == recycleOrder.AddressId);
+                        <span>姓名：@add.ReciverName</span>
+                        <span>联系人电话：@add.ReciverTel</span>
+                        <p>详细地址: @add.Detail</p>
+                    }
+                    <ul class="list-group">
+                        <li class="list-group-item-info">商品名：@recycleOrder.Product.Name</li>
+                        <li class="list-group-item-info">下单时间：@recycleOrder.CreateDateTime</li>
+                        <li class="list-group-item-info">完成时间：@recycleOrder.FinishDateTime</li>
+                    </ul>
+                </li>
+            }
+        </ul>
+
+@code {
+    [Inject]
+    private ApplicationDbContext _dbContext { get; set; }
+    [CascadingParameter]
+    public Task<AuthenticationState> AuthenticationStateTask { get; set; }
+
+    public List<ProductRecord> Orders { get; set; } = new();
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthenticationStateTask;
+        var username = state.User.Identity.Name;
+        Orders = _dbContext.ProductRecords
+            .Include(p => p.Product)
+            .Where(o => o.Status == 1 && o.ProcesserName == username)
+            .AsNoTracking()
+            .ToList();
+    }
+
+}

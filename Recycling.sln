@@ -10,6 +10,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Recycling.Data", "Recycling
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Recycling.Services", "Recycling.Services\Recycling.Services.csproj", "{007F2F96-59E4-49E6-9054-D77254D15C0C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Recycling.Employee", "Recycling.Employee\Recycling.Employee.csproj", "{9EEB8EC3-CBE5-497C-97BB-A7DD9AD95941}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +38,9 @@ Global
 		{007F2F96-59E4-49E6-9054-D77254D15C0C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{007F2F96-59E4-49E6-9054-D77254D15C0C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{007F2F96-59E4-49E6-9054-D77254D15C0C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9EEB8EC3-CBE5-497C-97BB-A7DD9AD95941}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9EEB8EC3-CBE5-497C-97BB-A7DD9AD95941}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9EEB8EC3-CBE5-497C-97BB-A7DD9AD95941}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9EEB8EC3-CBE5-497C-97BB-A7DD9AD95941}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

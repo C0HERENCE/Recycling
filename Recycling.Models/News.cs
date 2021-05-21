@@ -11,7 +11,7 @@ namespace Recycling.Models
         public bool Enabled { get; set; }
         public DateTime CreateTime { get; set; }
         public int AuthorId { get; set; }
-        public User Author { get; set; }
+        public AdminUser Author { get; set; }
         public List<Reply> Replies { get; set; }
     }
 }

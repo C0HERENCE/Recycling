@@ -1,0 +1,85 @@
+﻿@page "/manageProductOrder"
+@using Recycling.Data
+@using Recycling.Models
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext DbContext;
+
+@code {
+    public IQueryable<ProductRecord> Orders { get; set; }
+
+    protected override void OnInitialized()
+    {
+        Orders = DbContext.ProductRecords
+            .Include(o => o.User)
+            .Include(o => o.Product)
+            .AsNoTracking();
+    }
+
+    private void UpdateHandler(GridCommandEventArgs obj)
+    {
+        var editOrder = (ProductRecord) obj.Item;
+        var order = DbContext.ProductRecords.FirstOrDefault(u => u.Id == editOrder.Id);
+        if (order == null) return;
+        if (order.FinishDateTime == editOrder.FinishDateTime) // 没有重设完成时间时
+        {
+            if (editOrder.Status != 0) // 将订单状态设为结束时
+            {
+                order.FinishDateTime = DateTime.Now; // 更新完成时间
+            }
+        }
+        else
+        {
+            order.FinishDateTime = editOrder.FinishDateTime;
+        }
+        order.CreateDateTime = editOrder.CreateDateTime;
+        order.CreateDateTime = editOrder.CreateDateTime;
+        order.Status = editOrder.Status;
+        DbContext.SaveChanges();
+    }
+
+}
+
+<TelerikGrid Class="h-100" Data="Orders" FilterMode="GridFilterMode.FilterMenu"
+             Pageable="true" Sortable="true" EditMode="GridEditMode.Inline"
+             SelectionMode="@GridSelectionMode.Single"
+             OnUpdate="@UpdateHandler">
+
+    <GridColumns>
+        <GridColumn Field="@nameof(ProductRecord.Id)" Title="ID" Editable="false"></GridColumn>
+        <GridColumn Title="用户名" Editable="false">
+            <Template>
+                @{
+                    var recycleOrder = context as ProductRecord;
+                    @recycleOrder?.User.UserName
+                }
+            </Template>
+        </GridColumn>
+        <GridColumn Field="@nameof(ProductRecord.CreateDateTime)" Title="创建时间"></GridColumn>
+        <GridColumn Field="@nameof(ProductRecord.FinishDateTime)" Title="结束时间"></GridColumn>
+        <GridColumn Field="@nameof(ProductRecord.ProcesserName)" Title="处理人"></GridColumn>
+        <GridColumn Field="@nameof(ProductRecord.Status)" Title="订单状态">
+            <Template>
+                @{
+                    var order = context as ProductRecord;
+                    switch (order.Status)
+                    {
+                        case 0:
+                            <span>已下单</span>
+                            break;
+                        case 1:
+                            <span>已完成</span>
+                            break;
+                        default:
+                            <span>Error</span>
+                            throw new ArgumentOutOfRangeException();
+                    }
+                }
+            </Template>
+        </GridColumn>
+        <GridCommandColumn>
+            <GridCommandButton Command="Save" Icon="save" ShowInEdit="true">更新</GridCommandButton>
+            <GridCommandButton Command="Edit" Icon="edit">编辑</GridCommandButton>
+            <GridCommandButton Command="Cancel" Icon="cancel" ShowInEdit="true">取消</GridCommandButton>
+        </GridCommandColumn>
+    </GridColumns>
+</TelerikGrid>

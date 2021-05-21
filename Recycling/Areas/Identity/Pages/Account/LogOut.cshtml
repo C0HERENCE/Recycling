@@ -1,19 +1,22 @@
 ﻿@page
-@using Microsoft.AspNetCore.Identity
-@using Recycling.Models
 @attribute [IgnoreAntiforgeryToken]
-@inject SignInManager<User> SignInManager
-
-@functions {
-
-    public async Task<IActionResult> OnPost()
-    {
-        if (SignInManager.IsSignedIn(User))
-        {
-            await SignInManager.SignOutAsync();
-        }
-
-        return Redirect("~/");
-    }
-
+@model LogoutModel
+@{
+    ViewData["Title"] = "退出登录";
 }
+
+<header>
+    <h1>@ViewData["Title"]</h1>
+    @{
+        if (User.Identity.IsAuthenticated)
+        {
+            <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Page("/", new { area = "" })" method="post">
+                <button type="submit" class="nav-link btn btn-link text-dark">点击此处退出登录</button>
+            </form>
+        }
+        else
+        {
+            <p>你已成功退出</p>
+        }
+    }
+</header>

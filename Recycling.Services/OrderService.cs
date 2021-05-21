@@ -19,7 +19,8 @@ namespace Recycling.Services
 
         public List<RecycleOrder> GetOrdersByUsername(string username)
         {
-            return _userService.GetUserByUsername(username)?.Orders.ToList();
+            return _userService.GetUserByUsername(username)
+                ?.Orders.ToList();
         }
 
         public void AddOrder(string username, RecycleOrder order)

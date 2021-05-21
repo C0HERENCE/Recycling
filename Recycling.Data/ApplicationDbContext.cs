@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -6,7 +7,7 @@ using Recycling.Models;
 
 namespace Recycling.Data
 {
-    public class ApplicationDbContext : IdentityDbContext<User,IdentityRole<int>, int>
+    public class ApplicationDbContext : IdentityDbContext<User, Role, int>
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
@@ -17,7 +18,15 @@ namespace Recycling.Data
         public DbSet<Price> Prices { get; set; }
         public DbSet<RecycleOrder> RecycleOrders { get; set; }
         public DbSet<News> News { get; set; }
-        public DbSet<Activity> Activities { get; set; }
+        public DbSet<Product> Products { get; set; }
+        public DbSet<ProductRecord> ProductRecords { get; set; }
+        
+        public DbSet<Address> Address { get; set; }
+
+        public DbSet<AdminUser> AdminUsers { get; set; }
+
+
+
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -45,6 +54,53 @@ namespace Recycling.Data
                 new Price { Id = 13, CategoryId = 4, Name = "塑料筐", Desc = "装水果的塑料筐", Value = 0.6 },
                 new Price { Id = 14, CategoryId = 4, Name = "泡沫板", Desc = "白色泡沫板", Value = 0.6 },
             });
+            builder.Entity<AdminUser>().HasData(new List<AdminUser>{
+                new AdminUser
+                {
+                    Id = 1,
+                    Password = "123",
+                    Role = 1,
+                    Username = "admin"
+                },
+                new AdminUser
+                {
+                    Id = 2,
+                    Password = "123",
+                    Role = 2,
+                    Username = "worker"
+                }
+            });
+            builder.Entity<News>().HasData(new List<News>
+            {
+                new News
+                {
+                    Id = 1,
+                    AuthorId=1,
+                    Content = "gggggggg",
+                    CreateTime = DateTime.Now,
+                    Enabled = true,
+                    Title = "旧物是生活的桃花源"
+                },
+                new News
+                {
+                    Id = 2,
+                    AuthorId=1,
+                    Content = "yyyy",
+                    CreateTime = DateTime.Now,
+                    Enabled = true,
+                    Title = "NEW环保 | 当垃圾换个样子回到你眼前"
+                },
+                new News
+                {
+                    Id = 3,
+                    AuthorId=1,
+                    Content = "qqqq",
+                    CreateTime = DateTime.Now,
+                    Enabled = true,
+                    Title = "断舍离：不止扔扔扔那么简单"
+                },
+            });
+
             base.OnModelCreating(builder);
         }
     }

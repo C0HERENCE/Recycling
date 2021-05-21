@@ -1,0 +1,21 @@
+@page
+@model RegisterConfirmationModel
+@{
+    ViewData["Title"] = "确认注册";
+}
+
+<h1>@ViewData["Title"]</h1>
+@{
+    if (@Model.DisplayConfirmAccountLink)
+    {
+<p>
+    已经向你的邮箱发送一封验证邮件，请前往查看。
+</p>
+    }
+    else
+    {
+<p>
+       请检查你的邮箱完成注册
+</p>
+    }
+}

@@ -2,6 +2,9 @@
 @attribute [Authorize]
 @using Recycling.Models
 @using Recycling.Services
+@using Recycling.Data
+@inject IJSRuntime JS;
+
 <h2 class="text-center">预约上门</h2>
 <div class="row text-center">
     <div class="col-4 text-nowrap">
@@ -10,7 +13,8 @@
     </div>
     <div class="col-4 text-nowrap">
         <img src="images/no-cli.png" alt="no cli">
-        拒绝掺杂</div>
+        拒绝掺杂
+    </div>
     <div class="col-4 text-nowrap">
         <img src="images/weight.png" alt="weight">
         单次10KG起
@@ -24,7 +28,7 @@
             <span class="badge badge-secondary badge-pill">@RecycleOrder.RecycleItems.Count</span>
         </h2>
         <ul class="list-group mb-3">
-        
+
             @foreach (var item in RecycleOrder.RecycleItems)
             {
                 <li class="list-group-item d-flex justify-content-between lh-condensed">
@@ -38,7 +42,7 @@
                     </button>
                 </li>
             }
-        
+
             <li class="list-group-item d-flex justify-content-between">
                 <span>总计</span>
                 <strong>@RecycleOrder.RecycleItems.Sum(item => item.Weight) 千克</strong>
@@ -47,49 +51,49 @@
         <hr>
         <h3>预约时间</h3>
         <div class="row">
-        @{
-            var startHour = DateTime.Now.Hour + 1;
-        }
-        <div class="col-4">
-            <select id="date" class="form-control" @bind="_selectedDate">
-                @if (startHour >= 8 && startHour <= 17)
-                {
-                    <option>今天</option>
-                }
-                <option>明天</option>
-                <option>后天</option>
-            </select>
-        </div>
-        <div class="col-4">
-            <select id="hour" class="form-control" @bind="_orderedHour">
-                @{
-                    @if (_selectedDate == "今天")
+            @{
+                var startHour = DateTime.Now.Hour + 1;
+            }
+            <div class="col-4">
+                <select id="date" class="form-control" @bind="_selectedDate">
+                    @if (startHour >= 8 && startHour <= 17)
                     {
-                        for (var i = startHour; i < 18; i++)
+                        <option>今天</option>
+                    }
+                    <option>明天</option>
+                    <option>后天</option>
+                </select>
+            </div>
+            <div class="col-4">
+                <select id="hour" class="form-control" @bind="_orderedHour">
+                    @{
+                        @if (_selectedDate == "今天")
                         {
-                            <option>@i.ToString("00")</option>
+                            for (var i = startHour; i < 18; i++)
+                            {
+                                <option>@i.ToString("00")</option>
+                            }
+                        }
+                        else
+                        {
+                            for (var i = 8; i < 18; i++)
+                            {
+                                <option value=@i>@i.ToString("00") 点</option>
+                            }
                         }
                     }
-                    else
-                    {
-                        for (var i = 8; i < 18; i++)
+                </select>
+            </div>
+            <div class="col-4">
+                <select id="minute" class="form-control" @bind="_orderedMinute">
+                    @{
+                        for (var i = 0; i < 60; i += 10)
                         {
-                            <option value=@i>@i.ToString("00") 点</option>
+                            <option value=@i>@i.ToString("00")分</option>
                         }
                     }
-                }
-            </select>
-        </div>
-        <div class="col-4">
-            <select id="minute" class="form-control" @bind="_orderedMinute">
-                @{
-                    for (var i = 0; i < 60; i+=10)
-                    {
-                        <option value=@i>@i.ToString("00")分</option>
-                    }
-                }
-            </select>
-        </div>
+                </select>
+            </div>
         </div>
         <h3>通讯地址</h3>
         @{
@@ -103,28 +107,40 @@
                         <div class="form-check">
                             <input class="form-check-input" type="radio" name="addressRadio" @onchange="SelectionChanged" id=@("radio" + add.Id) value=@add.Id>
                             <label class="form-check-label" for=@("radio" + add.Id)>
-                                预约人：@add.User
+                                预约人：@add.ReciverName
                                 联系电话： @add.ReciverTel
                                 详细地址：@add.Detail
+                                <button @onclick="() => RemoveAddress(add.Id)" class="btn">删除</button>
                             </label>
                         </div>
                     }
                 }
             }
         }
-        
-        <button class="btn btn-primary" @onclick="AddAddress">添加地址</button>
-        
+
+        <!-- Button trigger modal -->
+
+
         <div class="w-100 text-center">
-            <button class="btn btn-primary m-1" @onclick="SendAway">公益赠送</button>
-            <button class="btn btn-success m-1" @onclick="OrderNow">立即下单</button>
-            <p>
-                <small class="text-muted">确认下单表示您接受<a href="#" class="text-success">《回收平台上门回收免责条款》</a></small>
-            </p>
+            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal">
+                添加地址
+            </button>
+            <AuthorizeView Roles="publish">
+                <Authorized>
+                    <button class="btn btn-success m-1" @onclick="OrderNow">立即下单</button>
+                    <p>
+                        <small class="text-muted">确认下单表示您接受<a href="/Rules" class="text-success">《河马回收平台上门回收免责条款》</a></small>
+                    </p>
+                </Authorized>
+                <NotAuthorized>
+                    <p class="text-danger">账号异常，当前无法下单</p>
+                </NotAuthorized>
+            </AuthorizeView>
         </div>
     </div>
     <div class="col-md-8 order-md-1 border-right">
-        <h2 class="mb-3 text-muted">添加品类
+        <h2 class="mb-3 text-muted">
+            添加品类
         </h2>
         <small class="text-muted">可以在同一订单中依次添加不同品类的可回收物</small>
         <h3>回收品类</h3>
@@ -135,12 +151,12 @@
                 <option>@category.Name</option>
             }
         </select>
-    
+
         @{
             var c = _recyclingService.CategoryService.GetPriceByCategoryName(_selectedCategoryName);
             if (c != null)
             {
-                <h3>今日指导价格</h3>
+                <h3>今日回收价格</h3>
                 <ul class="list-group">
                     @foreach (var cPrice in c)
                     {
@@ -157,7 +173,7 @@
                 </ul>
             }
         }
-    
+
         <h3>预估重量</h3>
         <div class="row">
             <div class="col-9">
@@ -165,7 +181,7 @@
             </div>
             <h3 class="col-3 text-nowrap">@_selectedWeight 千克</h3>
         </div>
-    
+
         <div class="w-100 text-center">
             <button class="btn btn-success my-1" @onclick="AddThisItem">添加该品类</button>
         </div>
@@ -173,14 +189,63 @@
 </div>
 
 
+<!-- Modal -->
+<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true" hidden="@showModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">输入个人地址信息</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="name">姓名</label>
+                    <input type="tel" id="name" @bind=uname>
+                </div>
+                <div class="form-group">
+                    <label for="tel">联系方式</label>
+                    <input type="tel" id="tel" @bind=utel>
+                </div>
+                <div class="form-group">
+                    <label for="de">详细地址</label>
+                    <textarea class="form-control" id="de" rows="3" @bind=udetail></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" @onclick=AddAddress>保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code{
+
+    public String uname { get; set; } = "";
+    public String utel { get; set; } = "";
+    public String udetail { get; set; } = "";
+    public bool showModal { get; set; }
+
+}
 
 @code {
-    [Inject] private RecyclingService _recyclingService { get; set; }
-    [Inject] private NavigationManager _navigationManager { get; set; }
-    [CascadingParameter] public Task<AuthenticationState> AuthenticationStateTask { get; set; }
-    
+
+    [Inject]
+    private RecyclingService _recyclingService { get; set; }
+
+    [Inject]
+    private NavigationManager _navigationManager { get; set; }
+
+    [Inject]
+    private ApplicationDbContext _dbContext { get; set; }
+
+    [CascadingParameter]
+    public Task<AuthenticationState> AuthenticationStateTask { get; set; }
+
     public RecycleOrder RecycleOrder { get; set; } = new RecycleOrder();
-    
+
     private string _username;
     string _selectedCategoryName = "--请选择--";
     string _selectedDate = "明天";
@@ -189,9 +254,10 @@
     double _selectedWeight = 10.0;
 
     string _selectedAddress = "";
+
     void SelectionChanged(ChangeEventArgs args)
     {
-        _selectedAddress = (string)args.Value;
+        _selectedAddress = (string) args.Value;
     }
 
     protected override async Task OnInitializedAsync()
@@ -211,6 +277,7 @@
         var ca = _recyclingService.CategoryService.GetCategoryByName(_selectedCategoryName);
         if (ca == null)
         {
+            JS.InvokeAsync<object>("alert", "请选择回收品类");
             Console.WriteLine("请选择回收品类");
             return;
         }
@@ -221,60 +288,83 @@
         });
         _selectedCategoryName = "--请选择--";
         _selectedWeight = 10.0;
-        Console.WriteLine("品类已添加");
+        JS.InvokeAsync<object>("alert", "品类已添加");
     }
 
     private void OrderNow()
     {
         if (RecycleOrder.RecycleItems.Count == 0)
         {
-            Console.WriteLine("请至少添加一种垃圾品类");
+            JS.InvokeAsync<object>("alert", "请至少添加一种垃圾品类");
             return;
         }
         if (_orderedHour == "" || _orderedMinute == "")
         {
-            Console.WriteLine("请选择预约上门时间");
+            JS.InvokeAsync<object>("alert", "请选择预约上门时间");
             return;
         }
         if (_selectedAddress == "")
         {
-            Console.WriteLine("请选择预约上门地址");
+            JS.InvokeAsync<object>("alert", "请选择预约上门地址");
             return;
         }
-        
+
         var orderedTime = DateTime.Now;
         if (_selectedDate != "今天") orderedTime = orderedTime.AddDays(_selectedDate == "明天" ? 1 : 2);
-        orderedTime = new DateTime(orderedTime.Year, orderedTime.Month, orderedTime.Day,  int.Parse(_orderedHour),  int.Parse(_orderedMinute),0);
+        orderedTime = new DateTime(orderedTime.Year, orderedTime.Month, orderedTime.Day, int.Parse(_orderedHour), int.Parse(_orderedMinute), 0);
         RecycleOrder.CreateDateTime = DateTime.Now;
         RecycleOrder.OrderedDateTime = orderedTime;
         RecycleOrder.OrderStatus = OrderStatus.Ordered;
         RecycleOrder.AddressId = int.Parse(_selectedAddress);
         _recyclingService.OrderService.AddOrder(_username, RecycleOrder);
-        Console.WriteLine("预约成功");
+        JS.InvokeAsync<object>("alert", "预约成功");
         _navigationManager.NavigateTo("/");
     }
 
     private void RemoveItem(RecycleItem item)
     {
         RecycleOrder.RecycleItems.Remove(item);
-        Console.WriteLine("已删除");
+        JS.InvokeAsync<object>("alert", "已删除");
     }
 
     private void AddAddress()
     {
         if (_recyclingService.AddressService.GetAddressCountByUsername(_username) >= 3)
         {
-            Console.WriteLine("最多拥有3个地址, 请先删除");
+            showModal = true;
+            JS.InvokeAsync<object>("alert", "最多拥有3个地址, 请先删除");
+            return;
+        }
+
+        if (udetail.Trim().Length == 0 || uname.Trim().Length == 0 || utel.Trim().Length == 0)
+        {
+            JS.InvokeVoidAsync("alert", "请输入完整");
             return;
         }
         _recyclingService.AddressService.AddAddressToUser(_username, new Address
         {
-            Detail = "马家屯",
+            Detail = udetail,
             Enabled = true,
-            ReciverName = "艳骨",
-            ReciverTel = "1336966333"
+            ReciverName = uname,
+            ReciverTel = utel
         });
-        Console.WriteLine("添加成功");
+        JS.InvokeAsync<object>("alert", "添加成功");
+        udetail = "";
+        utel = "";
+        uname = "";
+        showModal = false;
+        JS.InvokeVoidAsync("modalClose");
         StateHasChanged();
     }
+
+    private void RemoveAddress(int addId)
+    {
+        var firstOrDefault = _dbContext.Address.FirstOrDefault(a => a.Id == addId);
+        if (firstOrDefault == null)
+            return;
+        firstOrDefault.Enabled = false;
+        _dbContext.Update(firstOrDefault);
+        _dbContext.SaveChanges();
+    }
+
 }

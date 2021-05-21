@@ -10,5 +10,6 @@ namespace Recycling.Models
         public string Name { get; set; }
         public string Desc { get; set; }
         public double Value { get; set; }
+        public bool Enabled { get; set; }
     }
 }
