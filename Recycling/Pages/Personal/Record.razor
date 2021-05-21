@@ -1,0 +1,52 @@
+﻿@page "/record"
+@attribute [Authorize]
+@using Recycling.Models
+@using Recycling.Services
+@using Recycling.Data
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext DbContext;
+@inject IJSRuntime JS;
+
+
+<h3>兑换记录</h3>
+
+@foreach (var productRecord in DbContext.ProductRecords
+    .Include(p=>p.User)
+    .Include(p=>p.Product)
+    .Where(pr => pr.User.UserName == _username))
+{
+    <ul class="list-group">
+        <li class="list-group-item">
+            @productRecord.Product.Name
+            兑换于
+            @productRecord.CreateDateTime
+            当前状态
+            @{
+                @if (productRecord.Status == 1)
+                {
+                    <span>已完成</span>
+                }
+                else
+                {
+                    <span>订单进行中</span>
+                }
+            }
+            
+        </li>
+    </ul>
+}
+
+@code {
+    public string _username { get; set; }
+    [CascadingParameter]
+    public Task<AuthenticationState> AuthenticationStateTask { get; set; }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthenticationStateTask;
+        _username = state.User.Identity.Name;
+    }
+
+
+}

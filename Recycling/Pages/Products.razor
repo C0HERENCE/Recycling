@@ -1,0 +1,253 @@
+﻿@page "/Products"
+@using Recycling.Services
+@using Recycling.Data
+@using Recycling.Models
+@inject ApplicationDbContext DbContext;
+@inject IJSRuntime JsRuntime;
+<h3>积分商城</h3>
+
+<div class="container">
+    @{
+        var user = DbContext.Users.FirstOrDefault(u => u.UserName == _username);
+        if (user != null)
+        {
+            <h3>您当前的积分： @DbContext.Users.FirstOrDefault(u => u.UserName == _username).Score</h3>
+        }
+    }
+
+    <div class="row">
+        <div class="col-9">
+            <div class="row">
+                @foreach (var product in DbContext.Products.Where(x => x.Enabled && x.Stock>0).ToList())
+                {
+                    <div class="col-md-4">
+                        <div class="card m-2">
+                            <img src="@product.Cover" class="card-img-top" alt="...">
+                            <div class="card-body">
+                                <h5 class="card-title">@product.Name</h5>
+                                <p class="card-text">
+                                    <span class="font-weight-bold">产品介绍：</span>
+                                    @product.Description
+                                    <br>
+                                    <span class="font-weight-bold">所需积分：</span>
+                                    @product.Value
+                                    <br>
+                                    <span class="font-weight-bold">当前剩余：</span>
+                                    @product.Stock
+                                    <br>
+                                    <AuthorizeView Roles="buy">
+                                        <Authorized>
+                                            <button class="btn btn-primary" @onclick="async () => {await BuyProduct(product.Id);}">点击兑换</button>
+                                        </Authorized>
+                                        <NotAuthorized>
+                                            @{
+                                                if (user == null)
+                                                {
+                                                    <p>您还没有登录</p>
+                                                }
+                                                else
+                                                {
+                                                    <p class="text-danger">您没有兑换商品权限</p>
+                                                }
+                                            }
+                                        </NotAuthorized>
+                                    </AuthorizeView>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="col-3">
+
+            @{
+                if (user != null)
+                {
+                    <h3>选择收货地址</h3>
+                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal">
+                        添加地址
+                    </button>
+                }
+                else
+                {
+                    <p>登录后可选择收货地址</p>
+                }
+            }
+
+            @{
+                var addresses = RecyclingService.UserService.GetUserByUsername(_username)?.Addresses;
+                if (addresses != null)
+                {
+                    foreach (var add in addresses)
+                    {
+                        if (add.Enabled)
+                        {
+                            <div class="form-check" style="margin-bottom: 10px">
+                                <input class="form-check-input" type="radio" name="addressRadio" @onchange="SelectionChanged" id=@("radio" + add.Id) value=@add.Id>
+                                <label class="form-check-label" for=@("radio" + add.Id)>
+                                    预约人：@add.ReciverName
+                                    联系电话： @add.ReciverTel
+                                    详细地址：@add.Detail
+                                    <button @onclick="() => RemoveAddress(add.Id)" class="btn btn-danger">删除</button>
+                                </label>
+
+                            </div>
+                        }
+                    }
+                }
+            }
+
+        </div>
+    </div>
+    
+
+<!-- Modal -->
+    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">输入个人地址信息</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="name">姓名</label>
+                        <input type="tel" id="name" @bind=uname>
+                    </div>
+                    <div class="form-group">
+                        <label for="tel">联系方式</label>
+                        <input type="tel" id="tel" @bind=utel>
+                    </div>
+                    <div class="form-group">
+                        <label for="de">详细地址</label>
+                        <textarea class="form-control" id="de" rows="3" @bind=udetail></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" @onclick=AddAddress>保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@code {
+
+    [Inject]
+    ProductService _productService { get; set; }
+
+    [CascadingParameter]
+    public Task<AuthenticationState> AuthenticationStateTask { get; set; }
+
+    public string _username { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthenticationStateTask;
+        _username = state.User.Identity.Name;
+    }
+
+    private async Task BuyProduct(int productId)
+    {
+        var userModel = DbContext.Users.FirstOrDefault(u => u.UserName == _username);
+        if (userModel == null)
+        {
+            await JsRuntime.InvokeVoidAsync("alert", "请先登录");
+            return;
+        }
+        var productModel = DbContext.Products.FirstOrDefault(x => x.Id == productId);
+        if (productModel == null || productModel.Enabled == false)
+        {
+            await JsRuntime.InvokeVoidAsync("alert", "该商品目前不可兑换");
+            return;
+        }
+        if (userModel.Score < productModel.Value)
+        {
+            await JsRuntime.InvokeVoidAsync("alert", $"兑换失败\n所需{productModel.Value},你的积分（{userModel.Score}）不足");
+            return;
+        }
+        if (_selectedAddress == "")
+        {
+            await JsRuntime.InvokeVoidAsync("alert", "请选择商品上门地址");
+            return;
+        }
+        userModel.Score -= productModel.Value;
+        productModel.Stock -= 1;
+        if (productModel.Stock == 0)
+            productModel.Enabled = false;
+        await DbContext.ProductRecords.AddAsync(new ProductRecord
+        {
+            CreateDateTime = DateTime.Now,
+            ProductId = productId,
+            UserId = userModel.Id,
+            AddressId = int.Parse(_selectedAddress),
+            Status = 0
+        });
+        DbContext.Products.Update(productModel);
+        DbContext.Users.Update(userModel);
+        DbContext.SaveChanges();
+        await JsRuntime.InvokeVoidAsync("alert", $"兑换成功\n剩余积分{userModel.Score}");
+    }
+
+}
+
+
+@code{
+
+    public String uname { get; set; } = "";
+    public String utel { get; set; }= "";
+    public String udetail { get; set; }= "";
+
+    [Inject]
+    private RecyclingService RecyclingService { get; set; }
+
+    private async Task AddAddress()
+    {
+        if (RecyclingService.AddressService.GetAddressCountByUsername(_username) >= 3)
+        {
+            await JsRuntime.InvokeVoidAsync("alert", "最多拥有3个地址，请先删除");
+            return;
+        }
+        if (udetail.Trim().Length == 0 || uname.Trim().Length == 0 || utel.Trim().Length == 0)
+        {
+            await JsRuntime.InvokeVoidAsync("alert", "请输入完整");
+            return;
+        }
+        RecyclingService.AddressService.AddAddressToUser(_username, new Address
+        {
+            Detail = udetail,
+            Enabled = true,
+            ReciverName = uname,
+            ReciverTel = utel,
+        });
+        await JsRuntime.InvokeVoidAsync("alert", "添加成功");
+        udetail = "";
+        utel = "";
+        uname = "";
+        await JsRuntime.InvokeVoidAsync("modalClose");
+        StateHasChanged();
+    }
+
+    string _selectedAddress = "";
+
+    void SelectionChanged(ChangeEventArgs args)
+    {
+        _selectedAddress = (string) args.Value;
+    }
+
+    private void RemoveAddress(int addId)
+    {
+        var firstOrDefault = DbContext.Address.FirstOrDefault(a => a.Id == addId);
+        if (firstOrDefault == null)
+            return;
+        firstOrDefault.Enabled = false;
+        DbContext.Update(firstOrDefault);
+        DbContext.SaveChanges();
+    }
+
+}
